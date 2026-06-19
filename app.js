@@ -52,6 +52,10 @@
     countLine: document.getElementById("count-line"),
     exportBtn: document.getElementById("export-btn"),
     resetBtn: document.getElementById("reset-btn"),
+    remindTime: document.getElementById("remind-time"),
+    calBtn: document.getElementById("cal-btn"),
+    notifBtn: document.getElementById("notif-btn"),
+    remindHint: document.getElementById("remind-hint"),
   };
 
   var logs = load();
@@ -265,6 +269,189 @@
       setScore(Number(e.key));
     }
   });
+
+  /* ---------- daily reminder ---------- */
+  var REMIND_KEY = "flow.reminder.v1";
+  var notifTimer;
+
+  function loadReminder() {
+    try {
+      return JSON.parse(localStorage.getItem(REMIND_KEY)) || {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function saveReminder(r) {
+    localStorage.setItem(REMIND_KEY, JSON.stringify(r));
+  }
+
+  var reminder = loadReminder();
+  if (reminder.time) els.remindTime.value = reminder.time;
+
+  // Pad two digits and format a Date as a floating (local) iCalendar timestamp.
+  function icsStamp(d) {
+    function p(n) {
+      return String(n).padStart(2, "0");
+    }
+    return (
+      d.getFullYear() +
+      p(d.getMonth() + 1) +
+      p(d.getDate()) +
+      "T" +
+      p(d.getHours()) +
+      p(d.getMinutes()) +
+      "00"
+    );
+  }
+
+  // Next occurrence of HH:MM (today if still ahead, else tomorrow).
+  function nextOccurrence(hh, mm) {
+    var now = new Date();
+    var d = new Date();
+    d.setHours(hh, mm, 0, 0);
+    if (d <= now) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  function buildICS(hh, mm) {
+    var start = nextOccurrence(hh, mm);
+    var uid = "flow-daily-" + Date.now() + "@flow.app";
+    var dtstamp =
+      new Date()
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}/, "") ; // UTC stamp with trailing Z
+    var lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//Flow//Friction Log//EN",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      "UID:" + uid,
+      "DTSTAMP:" + dtstamp,
+      "DTSTART:" + icsStamp(start),
+      "DURATION:PT5M",
+      "RRULE:FREQ=DAILY",
+      "SUMMARY:Log today's friction 〰️",
+      "DESCRIPTION:Open Flow and tap 1–5. Ten seconds. Spot the trend\\, not the day.",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "DESCRIPTION:Log today's friction",
+      "TRIGGER:PT0M",
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ];
+    return lines.join("\r\n");
+  }
+
+  function parseTime() {
+    var parts = (els.remindTime.value || "21:00").split(":");
+    return { hh: Number(parts[0]) || 21, mm: Number(parts[1]) || 0 };
+  }
+
+  els.calBtn.addEventListener("click", function () {
+    var t = parseTime();
+    reminder.time = els.remindTime.value;
+    saveReminder(reminder);
+    var ics = buildICS(t.hh, t.mm);
+    var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "flow-daily-reminder.ics";
+    a.click();
+    URL.revokeObjectURL(url);
+    els.remindHint.textContent =
+      "Calendar file downloaded — open it and tap “Add” to set the daily repeat.";
+  });
+
+  // Best-effort in-app notification: fires while Flow is open/installed.
+  function scheduleLocalNotification() {
+    clearTimeout(notifTimer);
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    if (!reminder.notif) return;
+    var t = parseTime();
+    var when = nextOccurrence(t.hh, t.mm).getTime() - Date.now();
+    // setTimeout caps near 24.8 days; our window is always < 24h, so it's fine.
+    notifTimer = setTimeout(function () {
+      showReminderNotification();
+      scheduleLocalNotification(); // re-arm for the next day
+    }, Math.max(when, 0));
+  }
+
+  function showReminderNotification() {
+    if (logs[todayKey()]) return; // already logged today — skip the nudge
+    var opts = {
+      body: "Tap 1–5. Ten seconds.",
+      icon: "icons/icon-192.png",
+      badge: "icons/icon-192.png",
+      tag: "flow-daily",
+    };
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+      navigator.serviceWorker.ready
+        .then(function (reg) {
+          reg.showNotification("Log today's friction 〰️", opts);
+        })
+        .catch(function () {
+          new Notification("Log today's friction 〰️", opts);
+        });
+    } else {
+      new Notification("Log today's friction 〰️", opts);
+    }
+  }
+
+  function renderNotifButton() {
+    var supported = "Notification" in window;
+    if (!supported) {
+      els.notifBtn.textContent = "Notifications n/a";
+      els.notifBtn.disabled = true;
+      return;
+    }
+    if (Notification.permission === "granted" && reminder.notif) {
+      els.notifBtn.textContent = "Notifications on";
+      els.notifBtn.classList.add("on");
+    } else if (Notification.permission === "denied") {
+      els.notifBtn.textContent = "Notifications blocked";
+      els.notifBtn.classList.remove("on");
+    } else {
+      els.notifBtn.textContent = "Enable notifications";
+      els.notifBtn.classList.remove("on");
+    }
+  }
+
+  els.notifBtn.addEventListener("click", function () {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "granted") {
+      // Toggle off/on.
+      reminder.notif = !reminder.notif;
+      saveReminder(reminder);
+      renderNotifButton();
+      scheduleLocalNotification();
+      if (reminder.notif) showReminderNotification(); // confirm it works
+      return;
+    }
+    Notification.requestPermission().then(function (perm) {
+      if (perm === "granted") {
+        reminder.notif = true;
+        reminder.time = els.remindTime.value;
+        saveReminder(reminder);
+        showReminderNotification();
+        scheduleLocalNotification();
+      }
+      renderNotifButton();
+    });
+  });
+
+  els.remindTime.addEventListener("change", function () {
+    reminder.time = els.remindTime.value;
+    saveReminder(reminder);
+    scheduleLocalNotification();
+  });
+
+  renderNotifButton();
+  scheduleLocalNotification();
 
   render();
 })();
