@@ -68,32 +68,18 @@ def horizontal_gradient(size, stops):
 
 def make_master(size):
     s = size * SS
-    # Background: dark slate diagonal gradient.
-    bg = diagonal_bg(s, (27, 35, 48), (10, 13, 18))
+    # Flat solid background (matches the app theme color).
+    bg = Image.new("RGB", (s, s), (14, 17, 22))
 
-    # Brand wave gradient: green -> teal -> blue (the friction "flow" colors).
-    grad = horizontal_gradient(
-        s,
-        [
-            (0.0, (63, 185, 80)),    # --s1 green
-            (0.5, (45, 212, 191)),   # teal
-            (1.0, (88, 166, 255)),   # --accent blue
-        ],
-    )
+    # Flat solid wave in the brand "Flow" green.
+    wave_color = (63, 185, 80)  # --s1
 
     amp = s * 0.085
     width = int(s * 0.085)
 
-    # Soft shadow wave (offset, darker) for a touch of depth.
-    shadow = Image.new("RGB", (s, s), (0, 0, 0))
-    shadow_mask = stroke_mask(s, wave_points(s, amp, 2, 0, s * 0.5 + width * 0.6), width)
-    # dim the shadow
-    shadow_mask = shadow_mask.point(lambda v: int(v * 0.35))
-    bg = Image.composite(shadow, bg, shadow_mask)
-
-    # Main wave: composite the gradient through the wave mask.
     main_mask = stroke_mask(s, wave_points(s, amp, 2, 0, s * 0.5), width)
-    img = Image.composite(grad, bg, main_mask)
+    solid = Image.new("RGB", (s, s), wave_color)
+    img = Image.composite(solid, bg, main_mask)
 
     return img.resize((size, size), Image.LANCZOS)
 
