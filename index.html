@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0e1116" />
+  <meta name="description" content="Flow — a 10-second-a-day System Friction tracker. Spot burnout trends before they melt the wires." />
+  <title>Flow · System Friction Log</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E3%80%B0%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="head">
+      <h1 class="brand">Flow<span class="wave">〰️</span></h1>
+      <p class="tagline">One number a day. Spot the trend, not the day.</p>
+    </header>
+
+    <!-- Today's log -->
+    <section class="card" aria-labelledby="today-h">
+      <h2 id="today-h" class="card-title">How much friction today?</h2>
+      <p class="sub" id="today-date"></p>
+      <div class="scale" role="radiogroup" aria-label="System Friction rating from 1 to 5">
+        <button class="dot" data-score="1" role="radio" aria-checked="false">
+          <span class="num">1</span><span class="lbl">Flow</span>
+        </button>
+        <button class="dot" data-score="2" role="radio" aria-checked="false">
+          <span class="num">2</span><span class="lbl">Normal</span>
+        </button>
+        <button class="dot" data-score="3" role="radio" aria-checked="false">
+          <span class="num">3</span><span class="lbl">Resistance</span>
+        </button>
+        <button class="dot" data-score="4" role="radio" aria-checked="false">
+          <span class="num">4</span><span class="lbl">Stuck</span>
+        </button>
+        <button class="dot" data-score="5" role="radio" aria-checked="false">
+          <span class="num">5</span><span class="lbl">Crash</span>
+        </button>
+      </div>
+      <input
+        id="note"
+        class="note"
+        type="text"
+        maxlength="24"
+        placeholder="3 words max — optional (e.g. 'bad sleep')"
+        autocomplete="off"
+      />
+      <p class="hint" id="saved-hint" aria-live="polite"></p>
+    </section>
+
+    <!-- Status / alert -->
+    <section class="card status" id="status-card" aria-live="polite">
+      <div class="status-body">
+        <span class="status-icon" id="status-icon">✓</span>
+        <div>
+          <p class="status-title" id="status-title">All clear</p>
+          <p class="status-text" id="status-text">Keep logging. The signal builds over days.</p>
+        </div>
+      </div>
+      <button class="link-btn" id="protocol-toggle" hidden>Show downshift protocol →</button>
+    </section>
+
+    <!-- Trend -->
+    <section class="card" aria-labelledby="trend-h">
+      <div class="row-between">
+        <h2 id="trend-h" class="card-title">Rolling trend</h2>
+        <span class="avg" id="avg-pill">—</span>
+      </div>
+      <div class="chart" id="chart" aria-hidden="true"></div>
+      <p class="hint" id="trend-hint">Last 14 logged days. Lower is better.</p>
+    </section>
+
+    <!-- Downshift protocol (collapsible) -->
+    <section class="card protocol" id="protocol" hidden aria-labelledby="protocol-h">
+      <h2 id="protocol-h" class="card-title">Tripped circuit breaker — downshift</h2>
+      <div class="phase">
+        <h3>Phase 1 · 10-minute triage</h3>
+        <ul>
+          <li><b>Drop entirely:</b> next 72h — what can simply not happen, zero penalty? Push it.</li>
+          <li><b>Drop the deadline:</b> defer must-dos 4–7 days. Send a proactive note before it's late.</li>
+          <li><b>Drop the standard:</b> ship the non-negotiables at 70%. Functional &gt; perfect.</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <h3>Phase 2 · Protect the core (48h)</h3>
+        <ul>
+          <li>Hard off-switch at a fixed time. No "just one thing" later.</li>
+          <li>Two 30-min zero-input windows a day. No audio, no scrolling.</li>
+          <li>No-decision menu: same meal, same outfit, fixed routine.</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <h3>Phase 3 · Strategic reset day (on a 5)</h3>
+        <ul>
+          <li>Not a catch-up day. Not 12h of doomscrolling.</li>
+          <li>High-quality leisure: long walk, great meal, fiction, something tactile.</li>
+          <li>Resume one circuit at a time once you log a stable 2 for two days.</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span id="count-line">No logs yet</span>
+      <button class="ghost" id="export-btn">Export</button>
+      <button class="ghost danger" id="reset-btn">Reset</button>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
