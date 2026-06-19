@@ -53,7 +53,6 @@
     exportBtn: document.getElementById("export-btn"),
     resetBtn: document.getElementById("reset-btn"),
     remindTime: document.getElementById("remind-time"),
-    calBtn: document.getElementById("cal-btn"),
     notifBtn: document.getElementById("notif-btn"),
     remindHint: document.getElementById("remind-hint"),
   };
@@ -288,22 +287,6 @@
   var reminder = loadReminder();
   if (reminder.time) els.remindTime.value = reminder.time;
 
-  // Pad two digits and format a Date as a floating (local) iCalendar timestamp.
-  function icsStamp(d) {
-    function p(n) {
-      return String(n).padStart(2, "0");
-    }
-    return (
-      d.getFullYear() +
-      p(d.getMonth() + 1) +
-      p(d.getDate()) +
-      "T" +
-      p(d.getHours()) +
-      p(d.getMinutes()) +
-      "00"
-    );
-  }
-
   // Next occurrence of HH:MM (today if still ahead, else tomorrow).
   function nextOccurrence(hh, mm) {
     var now = new Date();
@@ -313,59 +296,10 @@
     return d;
   }
 
-  function buildICS(hh, mm) {
-    var start = nextOccurrence(hh, mm);
-    var uid = "flow-daily-" + Date.now() + "@flow.app";
-    var dtstamp =
-      new Date()
-        .toISOString()
-        .replace(/[-:]/g, "")
-        .replace(/\.\d{3}/, "") ; // UTC stamp with trailing Z
-    var lines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Flow//Friction Log//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      "UID:" + uid,
-      "DTSTAMP:" + dtstamp,
-      "DTSTART:" + icsStamp(start),
-      "DURATION:PT5M",
-      "RRULE:FREQ=DAILY",
-      "SUMMARY:Log today's friction 〰️",
-      "DESCRIPTION:Open Flow and tap 1–5. Ten seconds. Spot the trend\\, not the day.",
-      "BEGIN:VALARM",
-      "ACTION:DISPLAY",
-      "DESCRIPTION:Log today's friction",
-      "TRIGGER:PT0M",
-      "END:VALARM",
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ];
-    return lines.join("\r\n");
-  }
-
   function parseTime() {
     var parts = (els.remindTime.value || "21:00").split(":");
     return { hh: Number(parts[0]) || 21, mm: Number(parts[1]) || 0 };
   }
-
-  els.calBtn.addEventListener("click", function () {
-    var t = parseTime();
-    reminder.time = els.remindTime.value;
-    saveReminder(reminder);
-    var ics = buildICS(t.hh, t.mm);
-    var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "flow-daily-reminder.ics";
-    a.click();
-    URL.revokeObjectURL(url);
-    els.remindHint.textContent =
-      "Calendar file downloaded — open it and tap “Add” to set the daily repeat.";
-  });
 
   // Best-effort in-app notification: fires while Flow is open/installed.
   function scheduleLocalNotification() {

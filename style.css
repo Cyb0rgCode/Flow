@@ -28,7 +28,7 @@ html, body {
 .app {
   max-width: 520px;
   margin: 0 auto;
-  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  padding: calc(20px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -207,6 +207,11 @@ html, body {
 .remind-actions .ghost.on {
   color: var(--s1);
   border-color: var(--s1);
+}
+.remind-actions .primary.on {
+  background: var(--s1);
+  border-color: var(--s1);
+  color: #06210d;
 }
 
 /* Protocol */
