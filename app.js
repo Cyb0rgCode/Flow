@@ -69,6 +69,8 @@
     renderFooter();
   }
 
+  var LABELS = { 1: "Flow", 2: "Normal", 3: "Resistance", 4: "Stuck", 5: "Crash" };
+
   function renderSelection() {
     var entry = logs[key];
     var score = entry ? entry.score : null;
@@ -77,6 +79,8 @@
       dot.setAttribute("aria-checked", match ? "true" : "false");
     });
     els.note.value = entry && entry.note ? entry.note : "";
+    // Persistent feedback line under the scale (flashSaved overrides briefly).
+    els.savedHint.textContent = score ? "Logged · " + score + " " + LABELS[score] : "";
   }
 
   // Returns the run of the most recent consecutive logged days (no gaps).
@@ -198,8 +202,8 @@
     entry.note = els.note.value.trim();
     logs[key] = entry;
     save(logs);
-    flashSaved();
     render();
+    flashSaved();
   }
 
   function saveNote() {
@@ -213,7 +217,7 @@
     els.savedHint.textContent = "Saved ✓";
     clearTimeout(flashTimer);
     flashTimer = setTimeout(function () {
-      els.savedHint.textContent = "";
+      renderSelection(); // restore the persistent "Logged · N Label" line
     }, 1600);
   }
 
