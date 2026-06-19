@@ -21,12 +21,14 @@ def diagonal_bg(size, c1, c2):
     return img
 
 
-def wave_points(size, amplitude, periods, phase, y_center):
+def wave_points(x0, x1, amplitude, periods, phase, y_center):
+    """A wavy dash spanning x0..x1, like the 〰️ emoji next to the title."""
     pts = []
-    steps = size
+    span = x1 - x0
+    steps = int(span)
     for i in range(steps + 1):
-        x = i
         frac = i / steps
+        x = x0 + span * frac
         y = y_center + amplitude * math.sin(2 * math.pi * periods * frac + phase)
         pts.append((x, y))
     return pts
@@ -71,13 +73,14 @@ def make_master(size):
     # Flat solid background (matches the app theme color).
     bg = Image.new("RGB", (s, s), (14, 17, 22))
 
-    # Flat solid wave in the brand "Flow" green.
-    wave_color = (63, 185, 80)  # --s1
+    # Flat wavy dash matching the 〰️ next to the title, in the app accent blue.
+    wave_color = (88, 166, 255)  # --accent
 
-    amp = s * 0.085
-    width = int(s * 0.085)
+    amp = s * 0.13
+    width = int(s * 0.115)
+    pts = wave_points(s * 0.16, s * 0.84, amp, 1.5, 0, s * 0.5)
 
-    main_mask = stroke_mask(s, wave_points(s, amp, 2, 0, s * 0.5), width)
+    main_mask = stroke_mask(s, pts, width)
     solid = Image.new("RGB", (s, s), wave_color)
     img = Image.composite(solid, bg, main_mask)
 
