@@ -200,51 +200,17 @@ html, body {
 .bar[data-s="5"] { background: var(--s5); }
 .bar.empty { background: var(--card-2); }
 
-/* Reminder */
-.time {
+/* Date picker in the log card */
+.date-input {
   background: var(--card-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--text);
   padding: 6px 10px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-family: inherit;
 }
-.time:focus { outline: none; border-color: var(--accent); }
-.remind-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 14px;
-  flex-wrap: wrap;
-}
-.primary {
-  flex: 1;
-  min-width: 140px;
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: #06121f;
-  font-weight: 700;
-  padding: 11px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 0.92rem;
-}
-.primary:hover { filter: brightness(1.08); }
-.remind-actions .ghost {
-  flex: 1;
-  min-width: 140px;
-  padding: 11px 14px;
-  font-size: 0.92rem;
-}
-.remind-actions .ghost.on {
-  color: var(--s1);
-  border-color: var(--s1);
-}
-.remind-actions .primary.on {
-  background: var(--s1);
-  border-color: var(--s1);
-  color: #06210d;
-}
+.date-input:focus { outline: none; border-color: var(--accent); }
 
 /* Protocol */
 .protocol .phase { margin-top: 14px; }
@@ -257,12 +223,13 @@ html, body {
 .foot {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
   color: var(--muted);
   font-size: 0.82rem;
   padding: 4px 4px 0;
 }
-.foot #count-line { flex: 1; }
+.foot #count-line { flex: 1 0 100%; }
 .ghost {
   background: none;
   border: 1px solid var(--line);

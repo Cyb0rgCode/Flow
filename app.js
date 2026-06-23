@@ -50,19 +50,19 @@
     chart: document.getElementById("chart"),
     avgPill: document.getElementById("avg-pill"),
     countLine: document.getElementById("count-line"),
+    importBtn: document.getElementById("import-btn"),
+    importFile: document.getElementById("import-file"),
     exportBtn: document.getElementById("export-btn"),
     resetBtn: document.getElementById("reset-btn"),
-    remindTime: document.getElementById("remind-time"),
-    notifBtn: document.getElementById("notif-btn"),
-    remindHint: document.getElementById("remind-hint"),
+    logDate: document.getElementById("log-date"),
   };
 
   var logs = load();
-  var key = todayKey();
+  var selectedKey = todayKey();
 
   /* ---------- rendering ---------- */
   function render() {
-    els.date.textContent = prettyDate(new Date());
+    renderDate();
     renderSelection();
     renderStatus();
     renderChart();
@@ -71,8 +71,16 @@
 
   var LABELS = { 1: "Flow", 2: "Normal", 3: "Resistance", 4: "Stuck", 5: "Crash" };
 
+  function renderDate() {
+    els.logDate.value = selectedKey;
+    els.logDate.max = todayKey(); // no logging the future
+    var d = new Date(selectedKey + "T00:00:00");
+    var isToday = selectedKey === todayKey();
+    els.date.textContent = prettyDate(d) + (isToday ? " · Today" : "");
+  }
+
   function renderSelection() {
-    var entry = logs[key];
+    var entry = logs[selectedKey];
     var score = entry ? entry.score : null;
     els.dots.forEach(function (dot) {
       var match = Number(dot.dataset.score) === score;
@@ -103,7 +111,7 @@
     var card = els.statusCard;
     card.classList.remove("warn", "alert");
     var run = recentStreak();
-    var hasToday = !!logs[key];
+    var hasToday = !!logs[todayKey()];
 
     // Alert: a single 4 or 5 today, or three consecutive 4s.
     var threeFours = run.length >= 3 && run[0] >= 4 && run[1] >= 4 && run[2] >= 4;
@@ -197,18 +205,18 @@
 
   /* ---------- actions ---------- */
   function setScore(score) {
-    var entry = logs[key] || {};
+    var entry = logs[selectedKey] || {};
     entry.score = score;
     entry.note = els.note.value.trim();
-    logs[key] = entry;
+    logs[selectedKey] = entry;
     save(logs);
     render();
     flashSaved();
   }
 
   function saveNote() {
-    if (!logs[key]) return; // need a score first
-    logs[key].note = els.note.value.trim();
+    if (!logs[selectedKey]) return; // need a score first
+    logs[selectedKey].note = els.note.value.trim();
     save(logs);
   }
 
@@ -252,7 +260,7 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = "flow-friction-" + key + ".csv";
+    a.download = "flow-friction-" + todayKey() + ".csv";
     a.click();
     URL.revokeObjectURL(url);
   });
@@ -265,131 +273,116 @@
     }
   });
 
-  // Keyboard: press 1–5 to log today.
+  // Keyboard: press 1–5 to log the selected day.
   document.addEventListener("keydown", function (e) {
-    if (document.activeElement === els.note) return;
+    if (document.activeElement === els.note || document.activeElement === els.logDate) return;
     if (e.key >= "1" && e.key <= "5") {
       setScore(Number(e.key));
     }
   });
 
-  /* ---------- daily reminder ---------- */
-  var REMIND_KEY = "flow.reminder.v1";
-  var notifTimer;
-
-  function loadReminder() {
-    try {
-      return JSON.parse(localStorage.getItem(REMIND_KEY)) || {};
-    } catch (e) {
-      return {};
-    }
-  }
-  function saveReminder(r) {
-    localStorage.setItem(REMIND_KEY, JSON.stringify(r));
-  }
-
-  var reminder = loadReminder();
-  if (reminder.time) els.remindTime.value = reminder.time;
-
-  // Next occurrence of HH:MM (today if still ahead, else tomorrow).
-  function nextOccurrence(hh, mm) {
-    var now = new Date();
-    var d = new Date();
-    d.setHours(hh, mm, 0, 0);
-    if (d <= now) d.setDate(d.getDate() + 1);
-    return d;
-  }
-
-  function parseTime() {
-    var parts = (els.remindTime.value || "21:00").split(":");
-    return { hh: Number(parts[0]) || 21, mm: Number(parts[1]) || 0 };
-  }
-
-  // Best-effort in-app notification: fires while Flow is open/installed.
-  function scheduleLocalNotification() {
-    clearTimeout(notifTimer);
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    if (!reminder.notif) return;
-    var t = parseTime();
-    var when = nextOccurrence(t.hh, t.mm).getTime() - Date.now();
-    // setTimeout caps near 24.8 days; our window is always < 24h, so it's fine.
-    notifTimer = setTimeout(function () {
-      showReminderNotification();
-      scheduleLocalNotification(); // re-arm for the next day
-    }, Math.max(when, 0));
-  }
-
-  function showReminderNotification() {
-    if (logs[todayKey()]) return; // already logged today — skip the nudge
-    var opts = {
-      body: "Tap 1–5. Ten seconds.",
-      icon: "icons/icon-192.png",
-      badge: "icons/icon-192.png",
-      tag: "flow-daily",
-    };
-    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-      navigator.serviceWorker.ready
-        .then(function (reg) {
-          reg.showNotification("Log today's friction 〰️", opts);
-        })
-        .catch(function () {
-          new Notification("Log today's friction 〰️", opts);
-        });
-    } else {
-      new Notification("Log today's friction 〰️", opts);
-    }
-  }
-
-  function renderNotifButton() {
-    var supported = "Notification" in window;
-    if (!supported) {
-      els.notifBtn.textContent = "Notifications n/a";
-      els.notifBtn.disabled = true;
+  /* ---------- date selection ---------- */
+  els.logDate.addEventListener("change", function () {
+    var v = els.logDate.value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      els.logDate.value = selectedKey;
       return;
     }
-    if (Notification.permission === "granted" && reminder.notif) {
-      els.notifBtn.textContent = "Notifications on";
-      els.notifBtn.classList.add("on");
-    } else if (Notification.permission === "denied") {
-      els.notifBtn.textContent = "Notifications blocked";
-      els.notifBtn.classList.remove("on");
-    } else {
-      els.notifBtn.textContent = "Enable notifications";
-      els.notifBtn.classList.remove("on");
-    }
-  }
+    if (v > todayKey()) v = todayKey(); // clamp future to today
+    selectedKey = v;
+    render();
+  });
 
-  els.notifBtn.addEventListener("click", function () {
-    if (!("Notification" in window)) return;
-    if (Notification.permission === "granted") {
-      // Toggle off/on.
-      reminder.notif = !reminder.notif;
-      saveReminder(reminder);
-      renderNotifButton();
-      scheduleLocalNotification();
-      if (reminder.notif) showReminderNotification(); // confirm it works
-      return;
-    }
-    Notification.requestPermission().then(function (perm) {
-      if (perm === "granted") {
-        reminder.notif = true;
-        reminder.time = els.remindTime.value;
-        saveReminder(reminder);
-        showReminderNotification();
-        scheduleLocalNotification();
+  /* ---------- import ---------- */
+  function parseCSVLine(line) {
+    var out = [];
+    var cur = "";
+    var inQ = false;
+    for (var i = 0; i < line.length; i++) {
+      var ch = line[i];
+      if (inQ) {
+        if (ch === '"') {
+          if (line[i + 1] === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQ = false;
+          }
+        } else {
+          cur += ch;
+        }
+      } else if (ch === '"') {
+        inQ = true;
+      } else if (ch === ",") {
+        out.push(cur);
+        cur = "";
+      } else {
+        cur += ch;
       }
-      renderNotifButton();
-    });
+    }
+    out.push(cur);
+    return out;
+  }
+
+  var DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+  function addEntry(date, score, note) {
+    if (!DATE_RE.test(date)) return false;
+    score = Number(score);
+    if (!(score >= 1 && score <= 5)) return false;
+    logs[date] = { score: score, note: String(note || "").slice(0, 24) };
+    return true;
+  }
+
+  // Accepts Flow's CSV export or its JSON backup; merges into existing logs.
+  function importData(text) {
+    text = text.trim();
+    var added = 0;
+    if (text.charAt(0) === "{") {
+      var obj = JSON.parse(text);
+      Object.keys(obj).forEach(function (k) {
+        var e = obj[k] || {};
+        if (addEntry(k, e.score, e.note)) added++;
+      });
+    } else {
+      text.split(/\r?\n/).forEach(function (line) {
+        if (!line.trim()) return;
+        var f = parseCSVLine(line);
+        if (String(f[0]).trim().toLowerCase() === "date") return; // header
+        if (addEntry(String(f[0]).trim(), f[1], (f[2] || "").trim())) added++;
+      });
+    }
+    return added;
+  }
+
+  els.importBtn.addEventListener("click", function () {
+    els.importFile.click();
   });
 
-  els.remindTime.addEventListener("change", function () {
-    reminder.time = els.remindTime.value;
-    saveReminder(reminder);
-    scheduleLocalNotification();
+  els.importFile.addEventListener("change", function () {
+    var file = els.importFile.files && els.importFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var n = 0;
+      try {
+        n = importData(String(reader.result));
+      } catch (err) {
+        n = -1;
+      }
+      els.importFile.value = "";
+      if (n < 0) {
+        alert("Couldn't read that file. Use a CSV or JSON exported from Flow.");
+        return;
+      }
+      save(logs);
+      render();
+      els.countLine.textContent =
+        n === 0 ? "Nothing to import" : "Imported " + n + (n === 1 ? " day ✓" : " days ✓");
+      setTimeout(renderFooter, 2500);
+    };
+    reader.readAsText(file);
   });
-
-  renderNotifButton();
-  scheduleLocalNotification();
 
   render();
 })();

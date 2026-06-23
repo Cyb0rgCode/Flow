@@ -28,7 +28,10 @@
 
     <!-- Today's log -->
     <section class="card" aria-labelledby="today-h">
-      <h2 id="today-h" class="card-title">How much friction today?</h2>
+      <div class="row-between">
+        <h2 id="today-h" class="card-title">How much friction?</h2>
+        <input id="log-date" class="date-input" type="date" aria-label="Date to log" />
+      </div>
       <p class="sub" id="today-date"></p>
       <div class="scale" role="radiogroup" aria-label="System Friction rating from 1 to 5">
         <button class="dot" data-score="1" role="radio" aria-checked="false">
@@ -81,20 +84,6 @@
       <p class="hint" id="trend-hint">Last 14 logged days. Lower is better.</p>
     </section>
 
-    <!-- Daily reminder -->
-    <section class="card" aria-labelledby="remind-h">
-      <div class="row-between">
-        <h2 id="remind-h" class="card-title">Daily reminder</h2>
-        <input id="remind-time" class="time" type="time" value="21:00" aria-label="Reminder time" />
-      </div>
-      <div class="remind-actions">
-        <button class="primary" id="notif-btn">Enable notifications</button>
-      </div>
-      <p class="hint" id="remind-hint">
-        A daily nudge to log. Add Flow to your Home Screen for it to work on iPhone.
-      </p>
-    </section>
-
     <!-- Downshift protocol (collapsible) -->
     <section class="card protocol" id="protocol" hidden aria-labelledby="protocol-h">
       <h2 id="protocol-h" class="card-title">Tripped circuit breaker — downshift</h2>
@@ -126,14 +115,16 @@
 
     <footer class="foot">
       <span id="count-line">No logs yet</span>
+      <button class="ghost" id="import-btn">Import</button>
       <button class="ghost" id="export-btn">Export</button>
       <button class="ghost danger" id="reset-btn">Reset</button>
+      <input id="import-file" type="file" accept=".csv,.json,text/csv,application/json" hidden />
     </footer>
   </main>
 
   <script src="app.js"></script>
   <script>
-    // Register the service worker for offline use + notification delivery.
+    // Register the service worker for offline use.
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", function () {
         navigator.serviceWorker.register("sw.js").catch(function () {});
